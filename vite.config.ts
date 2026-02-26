@@ -5,4 +5,9 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   base: '/SwissSnowWeather/',
   plugins: [react()],
+  build: {
+    rollupOptions: {
+      input: 'index.html',
+    },
+  },
 })
