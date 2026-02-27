@@ -1,103 +1,72 @@
-import { useEffect, useState } from 'react';
-import type { Resort } from '../App';
-
-interface WeatherData {
-  temperature: number;
-  windspeed: number;
-  winddirection: number;
-  weathercode: number;
-  is_day: number;
-  time: string;
-}
-
-interface ApiResponse {
-  current_weather: WeatherData;
-}
+import { Link } from 'react-router-dom';
+import { getWeatherDescription } from '../services/weatherService';
+import type { Resort, WeatherData } from '../types';
 
 interface Props {
   resort: Resort;
+  weather: WeatherData | null;
 }
 
-const weatherCodeMap: Record<number, { text: string; icon: string }> = {
-  0: { text: 'Clear sky', icon: '☀️' },
-  1: { text: 'Mainly clear', icon: '🌤️' },
-  2: { text: 'Partly cloudy', icon: '⛅' },
-  3: { text: 'Overcast', icon: '☁️' },
-  45: { text: 'Fog', icon: '🌫️' },
-  48: { text: 'Depositing rime fog', icon: '🌫️' },
-  51: { text: 'Drizzle: Light', icon: '🌦️' },
-  53: { text: 'Drizzle: Moderate', icon: '🌧️' },
-  55: { text: 'Drizzle: Dense intensity', icon: '🌧️' },
-  61: { text: 'Rain: Slight', icon: '🌧️' },
-  63: { text: 'Rain: Moderate', icon: '🌧️' },
-  65: { text: 'Rain: Heavy intensity', icon: '🌧️' },
-  71: { text: 'Snow fall: Slight', icon: '🌨️' },
-  73: { text: 'Snow fall: Moderate', icon: '🌨️' },
-  75: { text: 'Snow fall: Heavy intensity', icon: '🌨️' },
-  95: { text: 'Thunderstorm: Slight or moderate', icon: '⛈️' },
-  96: { text: 'Thunderstorm with slight hail', icon: '⛈️' },
-  99: { text: 'Thunderstorm with heavy hail', icon: '⛈️' },
-};
-
-function ResortCard({ resort }: Props) {
-  const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${resort.latitude}&longitude=${resort.longitude}&current_weather=true&timezone=auto`;
-
-    fetch(url, { signal: controller.signal })
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`);
-        }
-        return res.json();
-      })
-      .then((data: ApiResponse) => {
-        setWeather(data.current_weather);
-        setLoading(false);
-      })
-      .catch((err) => {
-        if (err.name !== 'AbortError') {
-          setError(err.message);
-          setLoading(false);
-        }
-      });
-
-    return () => controller.abort();
-  }, [resort.latitude, resort.longitude]);
-
-  const renderContent = () => {
-    if (loading) return <p>Loading...</p>;
-    if (error) return <p className="error">{error}</p>;
-    if (weather) {
-      const codeInfo = weatherCodeMap[weather.weathercode] || { text: 'Unknown', icon: '❓' };
-      return (
-        <>
-          <div className="weather-icon" aria-label={codeInfo.text}>
-            {codeInfo.icon}
-          </div>
-          <div className="temp">
-            {weather.temperature.toFixed(1)}°C
-          </div>
-          <div className="description">{codeInfo.text}</div>
-          <div className="details">
-            <small>Wind {weather.windspeed} km/h</small>
-          </div>
-        </>
-      );
-    }
-    return null;
-  };
+export default function ResortCard({ resort, weather }: Props) {
+  const desc = weather ? getWeatherDescription(weather.weathercode) : null;
 
   return (
-    <div className="card">
-      <h2>{resort.name}</h2>
-      {renderContent()}
-    </div>
+    <Link to={`/resort/${resort.id}`}>
+      <div className="group bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg border border-slate-700 hover:border-blue-500 p-6 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/20 cursor-pointer h-full">
+        {/* Header */}
+        <div className="mb-4">
+          <h2 className="text-2xl font-bold text-white group-hover:text-blue-400 transition-colors">{resort.name}</h2>
+          <p className="text-sm text-gray-400">{resort.region}, {resort.country}</p>
+        </div>
+
+        {/* Weather Info */}
+        {weather && desc ? (
+          <div className="space-y-4">
+            {/* Temperature and Condition */}
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-4xl font-bold text-blue-400">{weather.temperature}°C</p>
+              </div>
+              <div className="text-5xl">{desc.icon}</div>
+            </div>
+
+            {/* Description */}
+            <p className="text-gray-300 font-medium">{desc.text}</p>
+
+            {/* Wind Info */}
+            <div className="pt-4 border-t border-slate-700 grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Vent</p>
+                <p className="text-lg font-semibold text-gray-100">{weather.windspeed} km/h</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Altitude</p>
+                <p className="text-lg font-semibold text-gray-100">{resort.elevation} m</p>
+              </div>
+            </div>
+
+            {/* Snow Condition Badge */}
+            <div className="pt-2">
+              <span
+                className={`inline-block px-3 py-1 rounded-full text-sm font-semibold transition-colors ${
+                  desc.isSnowyCondition
+                    ? 'bg-blue-500/20 text-blue-300 group-hover:bg-blue-500/40'
+                    : 'bg-amber-500/20 text-amber-300 group-hover:bg-amber-500/40'
+                }`}
+              >
+                {desc.isSnowyCondition ? '❄️ Conditions de neige' : '⛷️ Pas de neige'}
+              </span>
+            </div>
+
+            {/* Time */}
+            <p className="text-xs text-gray-500">Mis à jour: {new Date(weather.time).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p>
+          </div>
+        ) : (
+          <div className="py-8 text-center text-gray-400">
+            <p className="text-sm">Chargement des données météorologiques...</p>
+          </div>
+        )}
+      </div>
+    </Link>
   );
 }
-
-export default ResortCard;

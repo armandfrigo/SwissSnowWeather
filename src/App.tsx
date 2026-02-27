@@ -1,39 +1,29 @@
-import ResortCard from './components/ResortCard';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import DashboardPage from './pages/DashboardPage';
+import DetailPage from './pages/DetailPage';
+import ComparisonPage from './pages/ComparisonPage';
 import './index.css';
 
-export interface Resort {
-  name: string;
-  latitude: number;
-  longitude: number;
-}
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 10, // 10 minutes
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
-const resorts: Resort[] = [
-  { name: 'Chamonix', latitude: 45.9237, longitude: 6.8694 },
-  { name: 'Verbier', latitude: 46.0952, longitude: 7.2262 },
-  { name: 'Zermatt', latitude: 46.0207, longitude: 7.7491 },
-  { name: 'Gstaad', latitude: 46.4859, longitude: 7.2836 },
-  { name: 'Crans-Montana', latitude: 46.3166, longitude: 7.5171 },
-];
-
-function App() {
+export default function App() {
   return (
-    <div className="app-container">
-      <header>
-        <h1>Ski Resort Weather Dashboard</h1>
-        <p className="subtitle">Météo des neiges pour la région de Genève</p>
-      </header>
-      <main className="card-grid">
-        {resorts.map((r) => (
-          <ResortCard key={r.name} resort={r} />
-        ))}
-      </main>
-      <footer>
-        <p>
-          Data provided by <a href="https://open-meteo.com" target="_blank" rel="noopener noreferrer">Open-Meteo</a>
-        </p>
-      </footer>
-    </div>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter basename="/SwissSnowWeather">
+        <Routes>
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/resort/:id" element={<DetailPage />} />
+          <Route path="/compare" element={<ComparisonPage />} />
+        </Routes>
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 }
-
-export default App;
